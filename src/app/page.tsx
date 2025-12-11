@@ -2,18 +2,12 @@
 
 import {
   AreaChart,
-  BadgeDollarSign,
   Bot,
-  CandlestickChart,
   Check,
   ChevronRight,
-  Crown,
   LayoutDashboard,
-  Quote,
   ShieldCheck,
-  Smartphone,
   Star,
-  TrendingUp,
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -23,6 +17,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Logo } from '@/components/logo';
 import React, { useEffect, useState } from 'react';
+import { useUser, useAuth } from '@/firebase';
+import { signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 
 const StatCounter = ({ to, label, prefix = '', suffix = '' }: { to: number; label: string; prefix?: string; suffix?: string }) => {
   const [count, setCount] = useState(0);
@@ -61,6 +58,17 @@ const StatCounter = ({ to, label, prefix = '', suffix = '' }: { to: number; labe
 
 
 const LandingPage = () => {
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    if (auth) {
+      await signOut(auth);
+      router.push('/');
+    }
+  };
+
   const features = [
     {
       icon: <Bot className="h-8 w-8 text-primary" />,
@@ -150,12 +158,25 @@ const LandingPage = () => {
             </Link>
           </nav>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" asChild>
-              <Link href="/login">Login</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/login">Start Free Trial</Link>
-            </Button>
+            {isUserLoading ? (
+              <div className="h-10 w-24 animate-pulse rounded-md bg-muted"></div>
+            ) : user ? (
+              <>
+                <Button variant="ghost" asChild>
+                  <Link href="/dashboard">Dashboard</Link>
+                </Button>
+                <Button onClick={handleLogout}>Logout</Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" asChild>
+                  <Link href="/login">Login</Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/login">Start Free Trial</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -179,7 +200,7 @@ const LandingPage = () => {
                 </div>
                 <div className="mt-10">
                     <Button size="lg" asChild>
-                        <Link href="#pricing">
+                        <Link href="/login">
                             Start 7-Day Free Trial
                             <ChevronRight className="ml-2 h-5 w-5" />
                         </Link>
@@ -306,7 +327,7 @@ const LandingPage = () => {
                             </div>
                         </div>
                         <Button className="mt-6 w-full" asChild>
-                            <Link href="/login">View Your Dashboard</Link>
+                            <Link href="/dashboard">View Your Dashboard</Link>
                         </Button>
                     </div>
                 </div>
