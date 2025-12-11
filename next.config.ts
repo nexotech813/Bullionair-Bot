@@ -30,6 +30,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  env: {
+    FXAPI_KEY: process.env.FXAPI_KEY,
+  }
 };
 
 export default nextConfig;
