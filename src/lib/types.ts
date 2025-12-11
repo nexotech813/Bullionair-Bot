@@ -1,6 +1,5 @@
 'use client';
 
-import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 export const TradeSchema = z.object({
@@ -36,9 +35,9 @@ export const TradingDecisionInputSchema = z.object({
 export type TradingDecisionInput = z.infer<typeof TradingDecisionInputSchema>;
 
 export const TradingDecisionPromptInputSchema = TradingDecisionInputSchema.extend({
-    marketData: ai.defineSchema('marketData', {
-        price: 'number',
-        trend: 'string',
+    marketData: z.object({
+        price: z.number(),
+        trend: z.string(),
     }),
     currentTime: z.string(),
 });
