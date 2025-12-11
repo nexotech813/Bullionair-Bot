@@ -56,8 +56,10 @@ export const runTradingCycleFlow = ai.defineFlow(
             volume: tradeDetails.volume,
             entryPrice: marketData.price,
             confidenceLevel: tradeDetails.confidenceLevel,
+            stopLoss: tradeDetails.stopLoss,
+            takeProfit: tradeDetails.takeProfit,
           });
-          await logActivity(firestore, tradingAccountId, user.uid, `EXECUTION: Placed ${decision} order for ${tradeDetails.volume} lots.`, 'RESULT');
+          await logActivity(firestore, tradingAccountId, user.uid, `EXECUTION: Placed ${decision} order for ${tradeDetails.volume} lots. SL: ${tradeDetails.stopLoss}, TP: ${tradeDetails.takeProfit}`, 'RESULT');
         } else {
             await logActivity(firestore, tradingAccountId, user.uid, `WARNING: AI decided to open but provided no details.`, 'UPDATE');
         }

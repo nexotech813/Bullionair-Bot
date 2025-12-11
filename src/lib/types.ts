@@ -1,3 +1,5 @@
+'use client';
+
 import { z } from 'zod';
 
 export const TradeSchema = z.object({
@@ -12,6 +14,8 @@ export const TradeSchema = z.object({
   profit: z.number(),
   confidenceLevel: z.string(),
   status: z.enum(['WON', 'LOST', 'OPEN']),
+  stopLoss: z.number().optional(),
+  takeProfit: z.number().optional(),
 });
 export type Trade = z.infer<typeof TradeSchema>;
 
@@ -38,6 +42,8 @@ export const TradingDecisionOutputSchema = z.object({
       symbol: z.string().optional(),
       volume: z.number().optional(),
       confidenceLevel: z.string().optional(),
+      stopLoss: z.number().optional().describe('The calculated stop loss price level.'),
+      takeProfit: z.number().optional().describe('The calculated take profit price level.'),
     })
     .optional(),
 });

@@ -7,7 +7,7 @@
 
 import { ai } from '@/ai/genkit';
 import { getMarketData } from '@/lib/brokerage-service';
-import { TradingDecisionInputSchema, TradingDecisionOutputSchema, TradeSchema } from '@/lib/types';
+import { TradingDecisionInputSchema, TradingDecisionOutputSchema } from '@/lib/types';
 import type { TradingDecisionInput, TradingDecisionOutput } from '@/lib/types';
 
 
@@ -40,7 +40,11 @@ const decisionPrompt = ai.definePrompt({
     3.  **CLOSE**: If the current open trade should be closed (either to take profit or cut losses).
     4.  **WAIT**: If no clear opportunity exists or it's better to hold the current position.
 
-    Provide detailed reasoning based on the trend, price action, and risk management. If opening a trade, specify volume and confidence.
+    Provide detailed reasoning based on the trend, price action, and risk management. If opening a trade, you MUST specify:
+    - volume: A sensible trade volume.
+    - confidenceLevel: Your confidence in this trade (e.g., "High", "Medium", "Low").
+    - stopLoss: A specific price level for the stop loss.
+    - takeProfit: A specific price level for the take profit.
     `,
 });
 

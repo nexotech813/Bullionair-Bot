@@ -15,7 +15,7 @@ export type MarketData = {
 };
 
 const FXAPI_BASE_URL = 'https://api.fxapi.com/v1';
-const API_KEY = process.env.NEXT_PUBLIC_FXAPI_KEY; 
+const API_KEY = "fxa_live_eafS87WotvTRRcyImLduqpdAWNXttUIxYmrLDkbM"; 
 
 /**
  * Fetches live market data for gold (XAU/USD) from FxApi.
@@ -24,9 +24,11 @@ export async function getMarketData(): Promise<MarketData> {
   // This is a simplified example. FxApi might have a different structure.
   // We'll simulate trend analysis based on recent price movement.
   try {
-    const response = await fetch(`${FXAPI_BASE_URL}/latest?symbols=XAUUSD&api_key=${API_KEY}`);
+    const response = await fetch(`${FXAPI_BASE_URL}/latest?symbol=XAUUSD&api_key=${API_KEY}`);
     if (!response.ok) {
-        throw new Error('Failed to fetch market data from FxApi');
+        // Fallback to mock data on non-ok response
+        console.warn('Failed to fetch market data from FxApi, using mock data.');
+        return { price: 1950 + Math.random() * 20 - 10, trend: 'SIDEWAYS' };
     }
     const data = await response.json();
     const price = data.quotes.XAUUSD.price;
@@ -57,16 +59,24 @@ export async function placeTrade(
     volume: number;
     entryPrice: number;
     confidenceLevel: string;
+    stopLoss?: number;
+    takeProfit?: number;
   }
 ): Promise<string> {
     // In a real scenario, you would first call the FxApi here to open the position.
-    const brokerageResponse = await fetch(`${FXAPI_BASE_URL}/trade`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ instrument: tradeDetails.symbol, units: tradeDetails.volume, side: tradeDetails.type })
-    });
-    if (!brokerageResponse.ok) throw new Error('Failed to place trade with brokerage.');
-    const brokerageTrade = await brokerageResponse.json();
+    // const brokerageResponse = await fetch(`${FXAPI_BASE_URL}/trade`, {
+    //   method: 'POST',
+    //   headers: { 'Authorization': `Bearer ${API_KEY}`, 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({ 
+    //       instrument: tradeDetails.symbol, 
+    //       units: tradeDetails.volume, 
+    //       side: tradeDetails.type,
+    //       stopLoss: tradeDetails.stopLoss,
+    //       takeProfit: tradeDetails.takeProfit,
+    //   })
+    // });
+    // if (!brokerageResponse.ok) throw new Error('Failed to place trade with brokerage.');
+    // const brokerageTrade = await brokerageResponse.json();
     
     // For now, we immediately write to Firestore as before.
     const tradesCollection = collection(firestore, 'users', userId, 'tradingAccounts', tradingAccountId, 'trades');

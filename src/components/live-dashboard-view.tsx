@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import type { DailyGoal, Trade } from '@/lib/types';
-import { useCollection, useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useUser } from '@/firebase';
 import { runTradingCycleFlow } from '@/ai/flows/trading-cycle-flow';
 
 import {
@@ -33,6 +33,8 @@ import {
   BarChart2,
   CheckCircle2,
   Timer,
+  Target,
+  Shield,
 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
@@ -270,6 +272,16 @@ export function LiveDashboardView({ dailyGoal, onPause, tradingAccount }: LiveDa
                 )}>
                   {/* Realtime P/L would go here */}
                 </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground text-center pt-2 border-t mt-2">
+                  <div className="flex items-center gap-1">
+                      <Shield className="h-3 w-3 text-red-400"/>
+                      <span>SL: ${openTrade.stopLoss?.toFixed(2) || 'N/A'}</span>
+                  </div>
+                   <div className="flex items-center gap-1">
+                      <Target className="h-3 w-3 text-green-400"/>
+                      <span>TP: ${openTrade.takeProfit?.toFixed(2) || 'N/A'}</span>
+                  </div>
               </div>
               <div className="text-xs text-muted-foreground text-center">
                 Running: {Math.floor((new Date().getTime() - new Date(openTrade.timestamp).getTime()) / 60000)} min | Confidence: {openTrade.confidenceLevel}
