@@ -31,7 +31,7 @@ import {
 } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { ChartTooltipContent } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 
 function PerformanceMetric({
   label,
@@ -158,6 +158,13 @@ export default function ReportsPage() {
     return acc;
   }, [] as { name: string; balance: number }[]);
 
+  const chartConfig: ChartConfig = {
+    balance: {
+      label: "Balance",
+      color: "hsl(var(--chart-1))",
+    },
+  };
+
 
   return (
     <div className="grid gap-8">
@@ -170,12 +177,12 @@ export default function ReportsPage() {
         </CardHeader>
         <CardContent>
           <div className="h-[300px] w-full">
-            <ResponsiveContainer>
+            <ChartContainer config={chartConfig}>
               <AreaChart data={balanceHistory}>
                 <defs>
                   <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-chart-1)" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="var(--color-chart-1)" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="var(--color-balance)" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="var(--color-balance)" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
@@ -197,9 +204,9 @@ export default function ReportsPage() {
                   cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '3 3' }}
                   content={<ChartTooltipContent indicator='dot' />}
                 />
-                <Area type="monotone" dataKey="balance" stroke="hsl(var(--primary))" fill="url(#colorBalance)" />
+                <Area type="monotone" dataKey="balance" stroke="var(--color-balance)" fill="url(#colorBalance)" />
               </AreaChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </div>
         </CardContent>
       </Card>
