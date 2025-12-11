@@ -99,6 +99,14 @@ service cloud.firestore {
           allow update: if isExistingOwner(userId) && isSubDocumentParentIdImmutable();
           allow delete: if isExistingOwner(userId);
         }
+
+        match /botActivities/{activityId} {
+          allow get: if isOwner(userId);
+          allow list: if isOwner(userId);
+          allow create: if isOwner(userId); // AI flow writes this
+          allow update: if false;
+          allow delete: if false;
+        }
       }
     }
 
