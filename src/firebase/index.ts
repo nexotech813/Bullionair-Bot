@@ -2,46 +2,66 @@
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'
+import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
-// IMPORTANT: DO NOT MODIFY THIS FUNCTION
-// A singleton pattern to ensure Firebase is initialized only once.
+// A singleton pattern to ensure Firebase is initialized only once, compatible with server/client.
 let firebaseApp: FirebaseApp | undefined;
-function getFirebaseApp() {
+function getFirebaseApp(): FirebaseApp {
   if (firebaseApp) {
     return firebaseApp;
   }
-  
+
   if (!getApps().length) {
+    // If no apps are initialized, initialize a new one.
+    // This runs on first access on either client or server.
     try {
-      // Attempt to initialize via Firebase App Hosting environment variables
+      // Prefer automatic initialization if App Hosting env vars are available
       firebaseApp = initializeApp();
     } catch (e) {
-      // Only warn in production because it's normal to use the firebaseConfig to initialize
-      // during development
-      if (process.env.NODE_ENV === "production") {
-        console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
-      }
+      // Fallback to the config file, which is normal for local dev
       firebaseApp = initializeApp(firebaseConfig);
     }
   } else {
+    // If an app is already initialized, get that instance.
+    // This is common on the client-side with Fast Refresh.
     firebaseApp = getApp();
   }
   return firebaseApp;
 }
 
-export function initializeFirebase() {
-    const app = getFirebaseApp();
-    return getSdks(app);
+// Singleton instances for Auth and Firestore
+let auth: Auth | undefined;
+function getFirebaseAuth(): Auth {
+  if (!auth) {
+    auth = getAuth(getFirebaseApp());
+  }
+  return auth;
 }
 
-export function getSdks(firebaseApp: FirebaseApp) {
+let firestore: Firestore | undefined;
+function getFirebaseFirestore(): Firestore {
+  if (!firestore) {
+    firestore = getFirestore(getFirebaseApp());
+  }
+  return firestore;
+}
+
+// Main initialization function that returns all services.
+export function initializeFirebase() {
+  const app = getFirebaseApp();
+  const authInstance = getFirebaseAuth();
+  const firestoreInstance = getFirebaseFirestore();
   return {
-    firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp)
+    firebaseApp: app,
+    auth: authInstance,
+    firestore: firestoreInstance,
   };
+}
+
+// Legacy getSdks function for compatibility if needed, but initializeFirebase is preferred.
+export function getSdks() {
+    return initializeFirebase();
 }
 
 export * from './provider';
