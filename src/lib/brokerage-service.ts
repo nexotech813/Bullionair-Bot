@@ -8,6 +8,8 @@ import {
 } from 'firebase/firestore';
 import type { Trade } from './types';
 import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { EMA, RSI, ATR } from 'technicalindicators';
+
 
 export type MarketData = {
   price: number;
@@ -23,73 +25,69 @@ export type TechnicalIndicators = {
   atr: number;
 }
 
-const FXAPI_DATA_URL = 'https://api.fxapi.com/v1';
+const FXAPI_BASE_URL = 'https://api.fxapi.com/v1';
 const API_KEY = "fxa_live_eafS87WotvTRRcyImLduqpdAWNXttUIxYmrLDkbM"; 
 
 // The local address where your MT5 Bridge / Expert Advisor would be listening for commands.
 const MT5_BRIDGE_URL = 'http://localhost:8000';
 
-
-/**
- * Simulates fetching and calculating live technical indicators.
- * In a real application, this would involve a library like 'technicalindicators'
- * and a history of price data. For now, we simulate realistic values.
- */
-export async function getTechnicalIndicators(): Promise<TechnicalIndicators> {
-    // Simulate a base price and volatility
-    const basePrice = 1950 + Math.sin(Date.now() / 60000) * 20; // Oscillates over a minute
-    const volatility = Math.random() * 5;
-    const price = basePrice + (Math.random() - 0.5) * volatility;
-
-    // Simulate EMA crossover
-    const ema9 = basePrice + (Math.random() - 0.5) * (volatility / 2);
-    const ema21 = basePrice - (Math.random() - 0.5) * (volatility / 2);
-
-    // Simulate RSI
-    const rsi = 50 + (ema9 - ema21) * 5 + (Math.random() - 0.5) * 10; // Link RSI to crossover
-
-    // Simulate ATR
-    const atr = volatility * 1.5;
-
-    return {
-        price: parseFloat(price.toFixed(2)),
-        ema9: parseFloat(ema9.toFixed(2)),
-        ema21: parseFloat(ema21.toFixed(2)),
-        rsi: parseFloat(Math.max(0, Math.min(100, rsi)).toFixed(2)), // Clamp RSI between 0-100
-        atr: parseFloat(atr.toFixed(2)),
-    };
-}
-
-
-/**
- * Fetches live market data for gold (XAU/USD) from FxApi.
- * This is now a legacy function, prefer getTechnicalIndicators for strategy.
- */
-export async function getMarketData(): Promise<MarketData> {
-  try {
-    const response = await fetch(`${FXAPI_DATA_URL}/latest?symbol=XAUUSD&api_key=${API_KEY}`);
+async function getHistoricalData(symbol: string, interval: string, count: number): Promise<any[]> {
+    const url = `${FXAPI_BASE_URL}/timeseries?symbol=${symbol}&interval=${interval}&count=${count}&api_key=${API_KEY}`;
+    const response = await fetch(url, { cache: 'no-store' }); // Ensure fresh data
     if (!response.ok) {
-        console.warn('Failed to fetch market data from FxApi, using mock data.');
-        return { price: 1950 + Math.random() * 20 - 10, trend: 'SIDEWAYS' };
+        throw new Error(`Failed to fetch historical data from FxApi: ${response.statusText}`);
     }
     const data = await response.json();
-    // FxApi might return price under a different structure, adjust if necessary
-    const price = data.quotes?.XAUUSD?.price || data.price;
-    if (!price) {
-        throw new Error("Price not found in FxApi response.")
-    }
-
-    // Simple trend simulation - in a real app, you'd use a more robust trend analysis
-    const trendRoll = Math.random();
-    const trend = trendRoll < 0.4 ? 'UP' : trendRoll < 0.8 ? 'DOWN' : 'SIDEWAYS';
-
-    return { price, trend };
-  } catch (error) {
-    console.error("Error fetching market data:", error);
-    // Fallback to mock data on error to prevent crashes
-    return { price: 1950 + Math.random() * 20 - 10, trend: 'SIDEWAYS' };
-  }
+    return data.data || [];
 }
+
+/**
+ * Fetches live market data and calculates technical indicators.
+ * This now uses real data from FxApi and the 'technicalindicators' library.
+ */
+export async function getTechnicalIndicators(): Promise<TechnicalIndicators> {
+    try {
+        // Fetch the last 100 1-minute candles to have enough data for calculations
+        const historicalData = await getHistoricalData('XAUUSD', '1m', 100);
+
+        if (historicalData.length < 21) { // Need at least 21 periods for the longest EMA
+            throw new Error('Not enough historical data to calculate indicators.');
+        }
+
+        // FxApi returns [timestamp, open, high, low, close]
+        const closePrices = historicalData.map(d => d[4]);
+        const highPrices = historicalData.map(d => d[2]);
+        const lowPrices = historicalData.map(d => d[3]);
+        
+        const latestPrice = closePrices[closePrices.length - 1];
+
+        // Calculate Indicators
+        const ema9Values = EMA.calculate({ period: 9, values: closePrices });
+        const ema21Values = EMA.calculate({ period: 21, values: closePrices });
+        const rsiValues = RSI.calculate({ period: 14, values: closePrices });
+        const atrValues = ATR.calculate({
+            period: 14,
+            high: highPrices,
+            low: lowPrices,
+            close: closePrices,
+        });
+
+        return {
+            price: parseFloat(latestPrice.toFixed(2)),
+            ema9: parseFloat(ema9Values[ema9Values.length - 1].toFixed(2)),
+            ema21: parseFloat(ema21Values[ema21Values.length - 1].toFixed(2)),
+            rsi: parseFloat(rsiValues[rsiValues.length - 1].toFixed(2)),
+            atr: parseFloat(atrValues[atrValues.length - 1].toFixed(2)),
+        };
+
+    } catch (error) {
+        console.error("Critical Error in getTechnicalIndicators:", error);
+        // Fallback to prevent crashing the entire bot loop, but this indicates a serious problem.
+        // In a real production system, you might want to send an alert here.
+        return { price: 0, ema9: 0, ema21: 0, rsi: 50, atr: 0 };
+    }
+}
+
 
 /**
  * Places a new trade by sending a request to the local MT5 bridge.
