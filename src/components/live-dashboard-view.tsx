@@ -156,13 +156,13 @@ export function LiveDashboardView({ dailyGoal, onPause, tradingAccount }: LiveDa
   const losses = closedTrades.length - wins;
   const winRate = closedTrades.length > 0 ? (wins / closedTrades.length) * 100 : 0;
 
-  const balance = tradingAccount.startingBalance + profit;
+  const balance = tradingAccount.currentBalance + profit;
   const profitPercentage = dailyGoal.type === 'profit' ? (profit / dailyGoal.value) * 100 : 0;
 
   const statCards = [
     {
       title: 'Current Balance',
-      value: `$${balance.toLocaleString('en-US')}`,
+      value: `$${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: <DollarSign className="h-4 w-4 text-muted-foreground" />,
     },
     {

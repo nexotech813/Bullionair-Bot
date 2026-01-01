@@ -37,6 +37,7 @@ const profileFormSchema = z.object({
 });
 
 const tradingFormSchema = z.object({
+  currentBalance: z.coerce.number().positive(),
   dailyProfitTarget: z.coerce.number().positive(),
   dailyRiskLimit: z.coerce.number().positive(),
   maxPositionSize: z.coerce.number().positive(),
@@ -74,6 +75,7 @@ export default function SettingsPage() {
   const tradingForm = useForm<z.infer<typeof tradingFormSchema>>({
     resolver: zodResolver(tradingFormSchema),
     defaultValues: {
+      currentBalance: 10000,
       dailyProfitTarget: 1000,
       dailyRiskLimit: 500,
       maxPositionSize: 1.0,
@@ -90,6 +92,7 @@ export default function SettingsPage() {
     }
     if (tradingAccount) {
       tradingForm.reset({
+        currentBalance: tradingAccount.currentBalance,
         dailyProfitTarget: tradingAccount.dailyProfitTarget,
         dailyRiskLimit: tradingAccount.dailyRiskLimit,
         maxPositionSize: tradingAccount.maxPositionSize,
@@ -113,6 +116,7 @@ export default function SettingsPage() {
     if (!tradingAccount) return;
     const tradingAccountRef = doc(firestore, 'users', user!.uid, 'tradingAccounts', tradingAccount.id);
     updateDocumentNonBlocking(tradingAccountRef, {
+        currentBalance: values.currentBalance,
         dailyProfitTarget: values.dailyProfitTarget,
         dailyRiskLimit: values.dailyRiskLimit,
         maxPositionSize: values.maxPositionSize,
@@ -201,6 +205,20 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+                <FormField
+                    control={tradingForm.control}
+                    name="currentBalance"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Current Account Balance</FormLabel>
+                        <FormControl>
+                        <Input type="number" {...field} />
+                        </FormControl>
+                        <FormDescription>Set this to your actual MT5 balance.</FormDescription>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+              />
               <FormField
                 control={tradingForm.control}
                 name="dailyProfitTarget"
