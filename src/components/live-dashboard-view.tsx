@@ -42,6 +42,7 @@ import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import type { BotActivity, TradingAccount } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { getTechnicalIndicators } from '@/lib/brokerage-service';
 
 type LiveDashboardViewProps = {
   dailyGoal: DailyGoal;
@@ -65,6 +66,7 @@ const StatCard = ({ title, value, icon, isProfit = false, profitValue = 0 }: { t
 
 export function LiveDashboardView({ dailyGoal, onPause, tradingAccount }: LiveDashboardViewProps) {
   const [nextAnalysisTime, setNextAnalysisTime] = useState(15);
+  const [unrealizedPL, setUnrealizedPL] = useState<number | null>(null);
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -114,6 +116,16 @@ export function LiveDashboardView({ dailyGoal, onPause, tradingAccount }: LiveDa
           },
           openTrade: openTrade || null,
         });
+
+        // After the flow runs, if there's an open trade, calculate its live P/L
+        if (openTrade) {
+            const marketData = await getTechnicalIndicators();
+            const pnl = (marketData.price - openTrade.entryPrice) * (openTrade.type === 'SELL' ? -1 : 1) * openTrade.volume * 100;
+            setUnrealizedPL(pnl);
+        } else {
+            setUnrealizedPL(null); // No open trade, no P/L
+        }
+
       } catch (e: any) {
         console.error("Trading cycle failed:", e);
         toast({
@@ -141,7 +153,6 @@ export function LiveDashboardView({ dailyGoal, onPause, tradingAccount }: LiveDa
     const timer = setInterval(() => {
       setNextAnalysisTime(prev => {
         if (prev <= 1) {
-            // This is where you might trigger the analysis refresh
             return 15;
         }
         return prev - 1;
@@ -253,7 +264,15 @@ export function LiveDashboardView({ dailyGoal, onPause, tradingAccount }: LiveDa
         {openTrade ? (
           <Card>
             <CardHeader>
-              <CardTitle>Open Trade</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <span>Open Trade</span>
+                <span className={cn(
+                  "text-lg font-bold",
+                  unrealizedPL === null ? "" : unrealizedPL > 0 ? "text-green-400" : "text-red-400"
+                )}>
+                  {unrealizedPL !== null ? `${unrealizedPL >= 0 ? '+' : ''}$${unrealizedPL.toFixed(2)}` : 'Calculating...'}
+                </span>
+              </CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
               <div className="flex items-center justify-between">
@@ -263,11 +282,11 @@ export function LiveDashboardView({ dailyGoal, onPause, tradingAccount }: LiveDa
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground text-center pt-2 border-t mt-2">
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center justify-center gap-1">
                       <Shield className="h-3 w-3 text-red-400"/>
                       <span>SL: ${openTrade.stopLoss?.toFixed(2)}</span>
                   </div>
-                   <div className="flex items-center gap-1">
+                   <div className="flex items-center justify-center gap-1">
                       <Target className="h-3 w-3 text-green-400"/>
                       <span>TP: ${openTrade.takeProfit?.toFixed(2)}</span>
                   </div>
