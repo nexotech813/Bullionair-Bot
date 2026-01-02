@@ -5,23 +5,16 @@ import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 
-// A singleton pattern to ensure Firebase is initialized only once, compatible with server/client.
+// A singleton pattern to ensure Firebase is initialized only once ON THE CLIENT.
 let firebaseApp: FirebaseApp | undefined;
-function getFirebaseApp(): FirebaseApp {
+function getClientFirebaseApp(): FirebaseApp {
   if (firebaseApp) {
     return firebaseApp;
   }
 
   if (!getApps().length) {
-    // If no apps are initialized, initialize a new one.
-    // This runs on first access on either client or server.
-    try {
-      // Prefer automatic initialization if App Hosting env vars are available
-      firebaseApp = initializeApp();
-    } catch (e) {
-      // Fallback to the config file, which is normal for local dev
-      firebaseApp = initializeApp(firebaseConfig);
-    }
+    // This runs on first access on the client.
+    firebaseApp = initializeApp(firebaseConfig);
   } else {
     // If an app is already initialized, get that instance.
     // This is common on the client-side with Fast Refresh.
@@ -30,28 +23,29 @@ function getFirebaseApp(): FirebaseApp {
   return firebaseApp;
 }
 
-// Singleton instances for Auth and Firestore
+// Singleton instances for Auth and Firestore for the client
 let auth: Auth | undefined;
-function getFirebaseAuth(): Auth {
+function getClientAuth(): Auth {
   if (!auth) {
-    auth = getAuth(getFirebaseApp());
+    auth = getAuth(getClientFirebaseApp());
   }
   return auth;
 }
 
 let firestore: Firestore | undefined;
-function getFirebaseFirestore(): Firestore {
+function getClientFirestore(): Firestore {
   if (!firestore) {
-    firestore = getFirestore(getFirebaseApp());
+    firestore = getFirestore(getClientFirebaseApp());
   }
   return firestore;
 }
 
-// Main initialization function that returns all services.
+// Main CLIENT initialization function that returns all services.
+// This should ONLY be called from client components.
 export function initializeFirebase() {
-  const app = getFirebaseApp();
-  const authInstance = getFirebaseAuth();
-  const firestoreInstance = getFirebaseFirestore();
+  const app = getClientFirebaseApp();
+  const authInstance = getClientAuth();
+  const firestoreInstance = getClientFirestore();
   return {
     firebaseApp: app,
     auth: authInstance,
@@ -59,11 +53,7 @@ export function initializeFirebase() {
   };
 }
 
-// Legacy getSdks function for compatibility if needed, but initializeFirebase is preferred.
-export function getSdks() {
-    return initializeFirebase();
-}
-
+// Export hooks and providers intended for client-side use
 export * from './provider';
 export * from './client-provider';
 export * from './firestore/use-collection';
