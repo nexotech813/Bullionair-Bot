@@ -6,14 +6,14 @@ import { LiveDashboardView } from '@/components/live-dashboard-view';
 import { PerformanceReview } from '@/components/performance-review';
 import type { DailyGoal, TradingAccount } from '@/lib/types';
 import { Separator } from './ui/separator';
-import { useCollection, useFirestore, useUser, setDocumentNonBlocking, useFirebase } from '@/firebase';
+import { useCollection, useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import { Skeleton } from './ui/skeleton';
 
 export function DashboardPage() {
   const { user } = useUser();
-  const { firestore, auth } = useFirebase();
+  const firestore = useFirestore();
 
   const tradingAccountsQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -22,8 +22,9 @@ export function DashboardPage() {
 
   const { data: tradingAccounts, isLoading: isLoadingAccounts } = useCollection<TradingAccount>(tradingAccountsQuery);
 
-  const [tradingAccount, setTradingAccount] = useState<TradingAccount | undefined>(tradingAccounts?.[0]);
+  const [tradingAccount, setTradingAccount] = useState<TradingAccount | undefined>(undefined);
   const [dailyGoal, setDailyGoal] = useState<DailyGoal | undefined>();
+  const [isTradingActive, setIsTradingActive] = useState(false);
 
   useEffect(() => {
     if (tradingAccounts && tradingAccounts.length > 0) {
@@ -32,15 +33,9 @@ export function DashboardPage() {
       if (!dailyGoal) {
         setDailyGoal({ type: 'profit', value: activeAccount.dailyProfitTarget || 1000 });
       }
-      // If trading is active on load, ensure the view reflects that
-      if (activeAccount.autoTradingActive) {
-        setIsTradingActive(true);
-      }
     }
   }, [tradingAccounts, dailyGoal]);
 
-  const [isTradingActive, setIsTradingActive] = useState(tradingAccount?.autoTradingActive || false);
-  
   const handleStartTrading = (goal: DailyGoal, confirmation: string) => {
     if (!user || !tradingAccount) return;
     const accountRef = doc(firestore, 'users', user.uid, 'tradingAccounts', tradingAccount.id);

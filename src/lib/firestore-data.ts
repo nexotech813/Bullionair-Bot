@@ -46,7 +46,7 @@ export const createInitialUserData = async (
     dailyRiskLimit: 500,
     dailyProfitTarget: 1000,
     maxPositionSize: 1.0,
-    autoTradingActive: false,
+    autoTradingActive: false, // Explicitly set to false
   };
   // Use a non-blocking set for the trading account
   setDocumentNonBlocking(tradingAccountRef, tradingAccountData, { merge: true });
