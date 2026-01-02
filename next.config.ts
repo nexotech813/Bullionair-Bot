@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -30,9 +31,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  experimental: {
-    serverComponentsExternalPackages: ['technicalindicators'],
-  },
+  serverExternalPackages: ['technicalindicators'],
   // This ensures environment variables are available on the server
   env: {
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,

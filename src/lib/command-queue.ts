@@ -1,3 +1,4 @@
+
 'use server';
 import { Firestore, doc, setDoc } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase";
@@ -21,7 +22,7 @@ export type TradeCommand = {
  * Sends a trade command to the Firestore command queue.
  * The MT5 bridge should be listening to this document for changes.
  */
-export function sendTradeCommand(firestore: Firestore, command: Omit<TradeCommand, 'timestamp'>) {
+export async function sendTradeCommand(firestore: Firestore, command: Omit<TradeCommand, 'timestamp'>) {
     const commandRef = doc(firestore, COMMAND_DOC_PATH);
     const commandWithTimestamp: TradeCommand = {
         ...command,
