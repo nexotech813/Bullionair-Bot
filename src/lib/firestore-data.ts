@@ -6,10 +6,8 @@ import {
   setDoc,
   collection,
   writeBatch,
-  serverTimestamp,
 } from 'firebase/firestore';
 import { User } from 'firebase/auth';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 function generateReferralCode(length: number): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -34,9 +32,7 @@ export const createInitialUserData = async (
     lastName: lastName,
     referralCode: generateReferralCode(8),
   };
-  // Use a non-blocking set for the user profile
-  setDocumentNonBlocking(userProfileRef, userProfileData, { merge: true });
-
+  
   const tradingAccountRef = doc(collection(userProfileRef, 'tradingAccounts'));
   const tradingAccountData = {
     id: tradingAccountRef.id,
@@ -45,14 +41,14 @@ export const createInitialUserData = async (
     currentBalance: 10000,
     dailyRiskLimit: 500,
     dailyProfitTarget: 1000,
-    maxPositionSize: 1.0,
-    autoTradingActive: false, // Explicitly set to false
+    autoTradingActive: false, // Explicitly ensure trading is NOT active for new users.
   };
-  // Use a non-blocking set for the trading account
-  setDocumentNonBlocking(tradingAccountRef, tradingAccountData, { merge: true });
-  
-  // Create some initial bot activity
+
   const batch = writeBatch(firestore);
+
+  batch.set(userProfileRef, userProfileData, { merge: true });
+  batch.set(tradingAccountRef, tradingAccountData, { merge: true });
+  
   const activitiesCollection = collection(tradingAccountRef, 'botActivities');
 
   const initialActivities = [
@@ -69,8 +65,6 @@ export const createInitialUserData = async (
     });
   });
 
-  // You could also add some mock trades here if you want the user to have initial data
-  // For now, we will just commit the activities
+  // Commit all writes together as a single atomic operation.
   await batch.commit();
-
 };

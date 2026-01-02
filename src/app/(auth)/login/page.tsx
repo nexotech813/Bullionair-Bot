@@ -7,11 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth, useUser, useFirestore } from "@/firebase";
-import { initiateEmailSignIn, initiateEmailSignUp } from "@/firebase/non-blocking-login";
+import { initiateEmailSignIn } from "@/firebase/non-blocking-login";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { User, onAuthStateChanged, createUserWithEmailAndPassword } from "firebase/auth";
+import { User, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { createInitialUserData } from "@/lib/firestore-data";
 
 export default function LoginPage() {
@@ -37,7 +37,6 @@ export default function LoginPage() {
     const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
       if (user) {
         // User is logged in, redirect to dashboard.
-        // The data creation is now handled in handleSignUp.
         router.push('/dashboard');
       }
     });
@@ -57,12 +56,13 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      initiateEmailSignIn(auth, loginEmail, loginPassword);
-      // Redirection is handled by the onAuthStateChanged listener
+        // Use the official signIn method, which we can await
+        await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+        // The onAuthStateChanged listener will handle the redirect
     } catch (err: any) {
-      setError(err.message);
-      toast({ variant: "destructive", title: "Login Failed", description: err.message });
-      setLoading(false);
+        setError(err.message);
+        toast({ variant: "destructive", title: "Login Failed", description: err.message });
+        setLoading(false);
     }
   };
 

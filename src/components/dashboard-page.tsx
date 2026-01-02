@@ -7,7 +7,7 @@ import { PerformanceReview } from '@/components/performance-review';
 import type { DailyGoal, TradingAccount } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { useCollection, useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, doc } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import { Skeleton } from './ui/skeleton';
 
@@ -15,9 +15,10 @@ export function DashboardPage() {
   const { user } = useUser();
   const firestore = useFirestore();
 
+  // The query is simplified as we are querying a subcollection already under the user's UID.
   const tradingAccountsQuery = useMemoFirebase(() => {
     if (!user) return null;
-    return query(collection(firestore, 'users', user.uid, 'tradingAccounts'), where('userProfileId', '==', user.uid));
+    return query(collection(firestore, 'users', user.uid, 'tradingAccounts'));
   }, [firestore, user]);
 
   const { data: tradingAccounts, isLoading: isLoadingAccounts } = useCollection<TradingAccount>(tradingAccountsQuery);
@@ -30,6 +31,8 @@ export function DashboardPage() {
     if (tradingAccounts && tradingAccounts.length > 0) {
       const activeAccount = tradingAccounts[0];
       setTradingAccount(activeAccount);
+      // We no longer automatically set trading to active here.
+      // We set the daily goal from settings for the config form.
       if (!dailyGoal) {
         setDailyGoal({ type: 'profit', value: activeAccount.dailyProfitTarget || 1000 });
       }
@@ -47,7 +50,7 @@ export function DashboardPage() {
     setDocumentNonBlocking(accountRef, updateData, { merge: true });
     setTradingAccount(prev => prev ? { ...prev, ...updateData } : undefined);
     setDailyGoal(goal);
-    setIsTradingActive(true);
+    setIsTradingActive(true); // This is now the ONLY place where trading is activated.
   };
   
   const handlePauseTrading = () => {
