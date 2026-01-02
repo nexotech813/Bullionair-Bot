@@ -1,6 +1,5 @@
 'use server';
-import { Firestore, doc, setDoc, onSnapshot, getDoc } from "firebase/firestore";
-import type { Trade } from "./types";
+import { Firestore, doc, setDoc } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase";
 
 const COMMAND_DOC_PATH = 'bullionaire-bot-commands/trade-command';
@@ -9,13 +8,12 @@ export type TradeCommand = {
     action: 'OPEN' | 'CLOSE';
     timestamp: number;
     details: {
-        symbol: string;
-        volume: number;
-        type: 'BUY' | 'SELL';
+        symbol?: string;
+        volume?: number;
+        type?: 'BUY' | 'SELL';
         stopLoss?: number;
         takeProfit?: number;
-    } | {
-        ticketId: string; // Using a placeholder for ticketId
+        firestoreTradeId: string; // Used as the primary key to link back to our DB
     };
 };
 
@@ -32,7 +30,7 @@ export function sendTradeCommand(firestore: Firestore, command: Omit<TradeComman
     
     // Use a non-blocking write. The server doesn't need to wait for this to complete.
     setDocumentNonBlocking(commandRef, commandWithTimestamp, { merge: false });
-    console.log(`Command sent to Firestore queue: ${command.action}`);
+    console.log(`Command sent to Firestore queue: ${command.action} for trade ${command.details.firestoreTradeId}`);
 }
 
 /**

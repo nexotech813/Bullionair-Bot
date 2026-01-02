@@ -6,22 +6,24 @@
 
 import { ai } from '@/ai/genkit';
 import { tradingDecisionFlow } from './trading-decision-flow';
-import type { Trade, TradingDecisionInput } from '@/lib/types';
+import type { TradingDecisionInput } from '@/lib/types';
 import { Firestore, collection, doc } from 'firebase/firestore';
 import { getTechnicalIndicators, placeTradeInFirestore, closeTradeInFirestore } from '@/lib/brokerage-service';
-import { getSdks, addDocumentNonBlocking } from '@/firebase';
+import { initializeFirebase } from '@/firebase';
 import { z } from 'zod';
 import { sendTradeCommand } from '@/lib/command-queue';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+
 
 async function logActivity(firestore: Firestore, tradingAccountId: string, userId: string, message: string, type: 'ANALYSIS' | 'SIGNAL' | 'RESULT' | 'UPDATE' = 'ANALYSIS') {
     const activitiesCollection = collection(firestore, 'users', userId, 'tradingAccounts', tradingAccountId, 'botActivities');
     const activityRef = doc(activitiesCollection);
-    addDocumentNonBlocking(activitiesCollection, {
+    setDocumentNonBlocking(activityRef, {
         id: activityRef.id,
         message,
         timestamp: new Date().toISOString(),
         type,
-    });
+    }, { merge: false });
 }
 
 // This is a wrapper flow that orchestrates the decision and execution.
@@ -32,7 +34,7 @@ export const runTradingCycleFlow = ai.defineFlow(
     outputSchema: z.void(),
   },
   async (input: TradingDecisionInput) => {
-    const { firestore } = getSdks();
+    const { firestore } = initializeFirebase();
     const { tradingAccountId, user, openTrade } = input;
     
     // 1. Log that we are starting the analysis
@@ -71,6 +73,8 @@ export const runTradingCycleFlow = ai.defineFlow(
                   type: decision === 'OPEN_BUY' ? 'BUY' : 'SELL',
                   stopLoss: tradeDetails.stopLoss,
                   takeProfit: tradeDetails.takeProfit,
+                  // The newTradeId can be used by the bridge to update the correct trade doc later
+                  firestoreTradeId: newTradeId
               }
           });
           await logActivity(firestore, tradingAccountId, user.uid, `EXECUTION: Sent ${decision} command to queue. SL: ${tradeDetails.stopLoss}, TP: ${tradeDetails.takeProfit}`, 'RESULT');
@@ -90,7 +94,8 @@ export const runTradingCycleFlow = ai.defineFlow(
           sendTradeCommand(firestore, {
               action: 'CLOSE',
               details: {
-                  ticketId: openTrade.id, // The bridge will need to map this to its internal ticket ID
+                  // The MT5 bridge will map our firestore trade ID to its internal ticket ID
+                  firestoreTradeId: openTrade.id, 
               }
           });
           await logActivity(firestore, tradingAccountId, user.uid, `EXECUTION: Sent CLOSE command for trade ${openTrade.id}. Estimated P/L: $${profit.toFixed(2)}`, 'RESULT');

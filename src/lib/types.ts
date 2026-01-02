@@ -16,6 +16,7 @@ export const TradeSchema = z.object({
   status: z.enum(['WON', 'LOST', 'OPEN']),
   stopLoss: z.number().optional().nullable(),
   takeProfit: z.number().optional().nullable(),
+  mt5TicketId: z.number().optional().nullable(), // To store the ticket ID from MT5
 });
 export type Trade = z.infer<typeof TradeSchema>;
 
