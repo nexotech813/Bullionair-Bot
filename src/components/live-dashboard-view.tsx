@@ -98,6 +98,8 @@ export function LiveDashboardView({ dailyGoal, onPause, tradingAccount }: LiveDa
     if (!user || !tradingAccount || !firestore) return;
 
     let isCancelled = false;
+    
+    const openTradeFromState = trades?.find(trade => trade.status === 'OPEN');
 
     const runCycle = async () => {
       try {
@@ -109,13 +111,13 @@ export function LiveDashboardView({ dailyGoal, onPause, tradingAccount }: LiveDa
             dailyProfitTarget: tradingAccount.dailyProfitTarget,
             dailyRiskLimit: tradingAccount.dailyRiskLimit,
           },
-          openTrade: openTrade || null,
+          openTrade: openTradeFromState || null,
         });
 
         // After the flow runs, if there's an open trade, calculate its live P/L
-        if (openTrade) {
+        if (openTradeFromState) {
             const marketData = await getTechnicalIndicators();
-            const pnl = (marketData.price - openTrade.entryPrice) * (openTrade.type === 'SELL' ? -1 : 1) * openTrade.volume * 100;
+            const pnl = (marketData.price - openTradeFromState.entryPrice) * (openTradeFromState.type === 'SELL' ? -1 : 1) * openTradeFromState.volume * 100;
             setUnrealizedPL(pnl);
         } else {
             setUnrealizedPL(null); // No open trade, no P/L
@@ -141,7 +143,7 @@ export function LiveDashboardView({ dailyGoal, onPause, tradingAccount }: LiveDa
     return () => {
       isCancelled = true;
     };
-  }, [user, tradingAccount, firestore, openTrade, toast]);
+  }, [user, tradingAccount, firestore, trades, toast]);
 
 
   useEffect(() => {
