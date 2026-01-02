@@ -6,7 +6,7 @@ import { LiveDashboardView } from '@/components/live-dashboard-view';
 import { PerformanceReview } from '@/components/performance-review';
 import type { DailyGoal, TradingAccount } from '@/lib/types';
 import { Separator } from './ui/separator';
-import { useCollection, useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useUser, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, doc } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 import { Skeleton } from './ui/skeleton';
@@ -15,9 +15,8 @@ export function DashboardPage() {
   const { user } = useUser();
   const firestore = useFirestore();
 
-  // The query is simplified as we are querying a subcollection already under the user's UID.
   const tradingAccountsQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!firestore || !user) return null;
     return query(collection(firestore, 'users', user.uid, 'tradingAccounts'));
   }, [firestore, user]);
 
@@ -31,8 +30,7 @@ export function DashboardPage() {
     if (tradingAccounts && tradingAccounts.length > 0) {
       const activeAccount = tradingAccounts[0];
       setTradingAccount(activeAccount);
-      // We no longer automatically set trading to active here.
-      // We set the daily goal from settings for the config form.
+      // Logic to auto-start trading is removed. User must initiate.
       if (!dailyGoal) {
         setDailyGoal({ type: 'profit', value: activeAccount.dailyProfitTarget || 1000 });
       }
@@ -47,16 +45,16 @@ export function DashboardPage() {
         dailyProfitTarget: goal.type === 'profit' ? goal.value : tradingAccount.dailyProfitTarget,
         dailyRiskLimit: goal.type === 'risk' ? goal.value : tradingAccount.dailyRiskLimit,
     };
-    setDocumentNonBlocking(accountRef, updateData, { merge: true });
+    updateDocumentNonBlocking(accountRef, updateData);
     setTradingAccount(prev => prev ? { ...prev, ...updateData } : undefined);
     setDailyGoal(goal);
-    setIsTradingActive(true); // This is now the ONLY place where trading is activated.
+    setIsTradingActive(true); 
   };
   
   const handlePauseTrading = () => {
     if (!user || !tradingAccount) return;
     const accountRef = doc(firestore, 'users', user.uid, 'tradingAccounts', tradingAccount.id);
-    setDocumentNonBlocking(accountRef, { autoTradingActive: false }, { merge: true });
+    updateDocumentNonBlocking(accountRef, { autoTradingActive: false });
     setTradingAccount(prev => prev ? { ...prev, autoTradingActive: false } : undefined);
     setIsTradingActive(false);
   };

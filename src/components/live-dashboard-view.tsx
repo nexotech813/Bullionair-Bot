@@ -72,7 +72,7 @@ export function LiveDashboardView({ dailyGoal, onPause, tradingAccount }: LiveDa
   const { toast } = useToast();
 
   const tradesQuery = useMemoFirebase(() => {
-    if (!user || !tradingAccount) return null;
+    if (!firestore || !user || !tradingAccount) return null;
     return query(
       collection(firestore, 'users', user.uid, 'tradingAccounts', tradingAccount.id, 'trades'),
       orderBy('timestamp', 'desc')
@@ -82,19 +82,14 @@ export function LiveDashboardView({ dailyGoal, onPause, tradingAccount }: LiveDa
   const { data: trades, isLoading: tradesLoading } = useCollection<Trade>(tradesQuery);
   const openTrade = useMemo(() => trades?.find(trade => trade.status === 'OPEN'), [trades]);
 
-  const botActivitiesCollection = useMemoFirebase(() => {
-    if(!user || !tradingAccount) return null;
-    return collection(firestore, 'users', user.uid, 'tradingAccounts', tradingAccount.id, 'botActivities');
-  }, [firestore, user, tradingAccount]);
-
   const botActivitiesQuery = useMemoFirebase(() => {
-    if (!botActivitiesCollection) return null;
+    if(!firestore || !user || !tradingAccount) return null;
     return query(
-      botActivitiesCollection,
+      collection(firestore, 'users', user.uid, 'tradingAccounts', tradingAccount.id, 'botActivities'),
       orderBy('timestamp', 'desc'),
       limit(10)
     );
-  }, [botActivitiesCollection]);
+  }, [firestore, user, tradingAccount]);
 
   const { data: botActivities } = useCollection<BotActivity>(botActivitiesQuery);
 

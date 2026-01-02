@@ -49,14 +49,14 @@ export default function SettingsPage() {
   const { toast } = useToast();
 
   const userProfileRef = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
   const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   const tradingAccountsQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!firestore || !user) return null;
     return query(collection(firestore, 'users', user.uid, 'tradingAccounts'));
   }, [firestore, user]);
 
@@ -113,8 +113,8 @@ export default function SettingsPage() {
   }
 
   function onTradingSubmit(values: z.infer<typeof tradingFormSchema>) {
-    if (!tradingAccount) return;
-    const tradingAccountRef = doc(firestore, 'users', user!.uid, 'tradingAccounts', tradingAccount.id);
+    if (!tradingAccount || !user) return;
+    const tradingAccountRef = doc(firestore, 'users', user.uid, 'tradingAccounts', tradingAccount.id);
     updateDocumentNonBlocking(tradingAccountRef, {
         currentBalance: values.currentBalance,
         dailyProfitTarget: values.dailyProfitTarget,

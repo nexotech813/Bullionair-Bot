@@ -63,7 +63,7 @@ export default function ReportsPage() {
   const firestore = useFirestore();
 
   const tradingAccountsQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!firestore || !user) return null;
     return query(
       collection(firestore, 'users', user.uid, 'tradingAccounts')
     );
@@ -74,7 +74,7 @@ export default function ReportsPage() {
   const tradingAccount = tradingAccounts?.[0];
 
   const tradesQuery = useMemoFirebase(() => {
-    if (!user || !tradingAccount) return null;
+    if (!firestore || !user || !tradingAccount) return null;
     return query(
       collection(
         firestore,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -47,7 +47,7 @@ export function PerformanceReview() {
   const firestore = useFirestore();
 
   const tradingAccountsQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!firestore || !user) return null;
     return query(collection(firestore, 'users', user.uid, 'tradingAccounts'));
   }, [firestore, user]);
 
@@ -55,7 +55,7 @@ export function PerformanceReview() {
   const tradingAccount = tradingAccounts?.[0];
 
   const tradesQuery = useMemoFirebase(() => {
-    if(!user || !tradingAccount) return null;
+    if(!firestore || !user || !tradingAccount) return null;
     return query(collection(firestore, 'users', user.uid, 'tradingAccounts', tradingAccount.id, 'trades'), where('status', '!=', 'OPEN'));
   }, [firestore, user, tradingAccount]);
 
@@ -70,19 +70,22 @@ export function PerformanceReview() {
     },
   });
 
-  const totalProfit = trades?.reduce((acc, trade) => acc + trade.profit, 0) || 0;
-  const winRate = trades && trades.length > 0 ? (trades.filter(t => t.profit > 0).length / trades.length) * 100 : 0;
+  const totalProfit = trades?.reduce((acc, trade) => acc + (trade.profit || 0), 0) || 0;
+  const winRate = trades && trades.length > 0 ? (trades.filter(t => (t.profit || 0) > 0).length / trades.length) * 100 : 0;
   const tradesTaken = trades?.length || 0;
   const startingBalance = tradingAccount?.startingBalance || 10000;
   const currentBalance = startingBalance + totalProfit;
 
   // Update form default value when data loads
-  if (trades && !form.getValues('previousTradingData')) {
-    form.reset({
-      ...form.getValues(),
-      previousTradingData: `Total Profit: $${totalProfit.toFixed(2)}, Win Rate: ${winRate.toFixed(1)}%, Trades: ${tradesTaken}`,
-    });
-  }
+  useEffect(() => {
+      if (trades && !form.getValues('previousTradingData')) {
+        form.reset({
+          ...form.getValues(),
+          previousTradingData: `Total Profit: $${totalProfit.toFixed(2)}, Win Rate: ${winRate.toFixed(1)}%, Trades: ${tradesTaken}`,
+        });
+      }
+  }, [trades, totalProfit, winRate, tradesTaken, form]);
+
 
   async function onSubmit(values: z.infer<typeof suggestionFormSchema>) {
     try {

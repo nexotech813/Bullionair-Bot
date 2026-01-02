@@ -15,7 +15,7 @@ export default function ReferralsPage() {
   const firestore = useFirestore();
 
   const userProfileRef = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
